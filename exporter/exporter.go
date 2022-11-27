@@ -291,7 +291,7 @@ func (e *UwsgiExporter) collectMetrics(stats *UwsgiStats, ch chan<- prometheus.M
 			ch <- newGaugeMetric(workerDescs["cpu"], float64(0.0), labelValues...)
 		} else {
 			WorkerPIDInfo, err := pidusage.GetStat(workerStats.PID)
-			if err {
+			if err != nil {
 				ch <- newGaugeMetric(workerDescs["cpu"], float64(0.0), labelValues...)
 			} else {
 				ch <- newGaugeMetric(workerDescs["cpu"], float64(WorkerPIDInfo.CPU), labelValues...)
