@@ -8,6 +8,7 @@ import (
 	"github.com/go-kit/log"
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/struCoder/pidusage"
 )
 
 // UwsgiExporter collects uwsgi metrics for prometheus.
@@ -61,7 +62,6 @@ var (
 		},
 
 		workerSubsystem: {
-			"pid":                           "Worker PID",
 			"accepting":                     "Is this worker accepting requests?",
 			"delta_requests":                "Number of delta requests",
 			"signal_queue_length":           "Length of signal queue.",
@@ -72,6 +72,7 @@ var (
 			"average_response_time_seconds": "Average response time in seconds.",
 			"apps":                          "Number of apps.",
 			"cores":                         "Number of cores.",
+			"cpu":                           "CPU usage",
 
 			"busy":                    "Is busy",
 			"idle":                    "Is idle",
@@ -278,7 +279,6 @@ func (e *UwsgiExporter) collectMetrics(stats *UwsgiStats, ch chan<- prometheus.M
 	for _, workerStats := range availableWorkers {
 		labelValues := []string{strconv.Itoa(workerStats.ID)}
 
-		ch <- newGaugeMetric(workerDescs["pid"], float64(workerStats.PID), labelValues...)
 		ch <- newGaugeMetric(workerDescs["accepting"], float64(workerStats.Accepting), labelValues...)
 		ch <- newGaugeMetric(workerDescs["delta_requests"], float64(workerStats.DeltaRequests), labelValues...)
 		ch <- newGaugeMetric(workerDescs["signal_queue_length"], float64(workerStats.SignalQueue), labelValues...)
@@ -287,6 +287,12 @@ func (e *UwsgiExporter) collectMetrics(stats *UwsgiStats, ch chan<- prometheus.M
 		ch <- newGaugeMetric(workerDescs["running_time_seconds"], float64(workerStats.RunningTime)/usDivider, labelValues...)
 		ch <- newGaugeMetric(workerDescs["last_spawn_time_seconds"], float64(workerStats.LastSpawn), labelValues...)
 		ch <- newGaugeMetric(workerDescs["average_response_time_seconds"], float64(workerStats.AvgRt)/usDivider, labelValues...)
+		if workerStats.PID == 0 {
+			ch <- newGaugeMetric(workerDescs["cpu"], float64(0.0), labelValues...)
+		} else {
+			WorkerPIDInfo, _ := pidusage.GetStat(workerStats.PID)
+			ch <- newGaugeMetric(workerDescs["cpu"], float64(WorkerPIDInfo.CPU), labelValues...)
+		}
 		switch workerStats.Status {
 		case "busy":
 			ch <- newGaugeMetric(workerDescs["busy"], float64(1.0), labelValues...)
