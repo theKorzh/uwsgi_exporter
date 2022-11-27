@@ -290,8 +290,12 @@ func (e *UwsgiExporter) collectMetrics(stats *UwsgiStats, ch chan<- prometheus.M
 		if workerStats.PID == 0 {
 			ch <- newGaugeMetric(workerDescs["cpu"], float64(0.0), labelValues...)
 		} else {
-			WorkerPIDInfo, _ := pidusage.GetStat(workerStats.PID)
-			ch <- newGaugeMetric(workerDescs["cpu"], float64(WorkerPIDInfo.CPU), labelValues...)
+			WorkerPIDInfo, err := pidusage.GetStat(workerStats.PID)
+			if err {
+				ch <- newGaugeMetric(workerDescs["cpu"], float64(0.0), labelValues...)
+			} else {
+				ch <- newGaugeMetric(workerDescs["cpu"], float64(WorkerPIDInfo.CPU), labelValues...)
+			}
 		}
 		switch workerStats.Status {
 		case "busy":
